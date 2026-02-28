@@ -1,0 +1,6 @@
+name: CustomAlerts
+main: CustomAlerts\Main
+version: 1.0.0
+api: 5.0.0
+author: ZyberPE
+description: Advanced custom alerts system
