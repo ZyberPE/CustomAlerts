@@ -1,0 +1,73 @@
+motd:
+  enabled: true
+  line1: "§bMy Server §7| §e{TIME}"
+  line2: "§aPlayers: §f{ONLINE}§7/§f{MAX}"
+  auto-update-seconds: 60
+
+outdated:
+  client:
+    enabled: true
+    message: "§cYour client is outdated!"
+  server:
+    enabled: true
+    message: "§cThis server is outdated!"
+
+whitelist:
+  enabled: true
+  message: "§cServer is whitelisted!"
+
+full-server:
+  enabled: true
+  message: "§cServer is full!"
+
+join:
+  enabled: true
+  message: "§a{PLAYER} joined the game"
+
+quit:
+  enabled: true
+  message: "§c{PLAYER} has left the game"
+
+death:
+  default:
+    enabled: true
+    message: "§c{PLAYER} died"
+  contact:
+    enabled: true
+    message: "§c{PLAYER} was killed by {BLOCK}"
+  kill:
+    enabled: true
+    message: "§c{PLAYER} was killed by {KILLER}"
+  projectile:
+    enabled: true
+    message: "§c{PLAYER} was shot by {KILLER}"
+  suffocation:
+    enabled: true
+    message: "§c{PLAYER} suffocated"
+  fall:
+    enabled: true
+    message: "§c{PLAYER} fell from a high place"
+  fire:
+    enabled: true
+    message: "§c{PLAYER} went up in flames"
+  onfire:
+    enabled: true
+    message: "§c{PLAYER} burned to death"
+  lava:
+    enabled: true
+    message: "§c{PLAYER} tried to swim in lava"
+  drowning:
+    enabled: true
+    message: "§c{PLAYER} drowned"
+  explosion:
+    enabled: true
+    message: "§c{PLAYER} exploded"
+  void:
+    enabled: true
+    message: "§c{PLAYER} fell into the void"
+  suicide:
+    enabled: true
+    message: "§c{PLAYER} committed suicide"
+  magic:
+    enabled: true
+    message: "§c{PLAYER} was killed by magic"
