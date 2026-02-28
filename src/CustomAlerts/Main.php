@@ -6,42 +6,29 @@ namespace CustomAlerts;
 
 use pocketmine\plugin\PluginBase;
 use pocketmine\event\Listener;
+use pocketmine\event\server\QueryRegenerateEvent;
 use pocketmine\event\player\PlayerPreLoginEvent;
 use pocketmine\event\player\PlayerJoinEvent;
 use pocketmine\event\player\PlayerQuitEvent;
-use pocketmine\event\entity\EntityDamageEvent;
-use pocketmine\event\entity\EntityDamageByEntityEvent;
-use pocketmine\event\entity\EntityDamageByBlockEvent;
 use pocketmine\event\entity\EntityDeathEvent;
+use pocketmine\event\entity\EntityDamageEvent;
 use pocketmine\player\Player;
 use pocketmine\utils\Config;
-use pocketmine\scheduler\ClosureTask;
 use pocketmine\network\mcpe\protocol\ProtocolInfo;
-use pocketmine\Server;
 
 class Main extends PluginBase implements Listener {
 
     private Config $config;
 
     public function onEnable(): void {
-        @mkdir($this->getDataFolder());
-        $this->saveResource("config.yml");
-
-        $this->config = new Config($this->getDataFolder() . "config.yml", Config::YAML);
-
+        $this->saveDefaultConfig();
+        $this->config = $this->getConfig();
         $this->getServer()->getPluginManager()->registerEvents($this, $this);
-
-        $this->updateMotd();
-
-        $this->getScheduler()->scheduleRepeatingTask(
-            new ClosureTask(fn() => $this->updateMotd()),
-            20 * (int)$this->config->getNested("motd.auto-update-seconds", 60)
-        );
     }
 
-    /* -------------------- MOTD -------------------- */
+    /* -------------------- MOTD (API 5 SAFE) -------------------- */
 
-    private function updateMotd(): void {
+    public function onQueryRegenerate(QueryRegenerateEvent $event): void {
 
         if(!$this->config->getNested("motd.enabled", true)) return;
 
@@ -63,7 +50,9 @@ class Main extends PluginBase implements Listener {
             $this->config->getNested("motd.line2")
         );
 
-        $this->getServer()->setMotd($line1 . "§r\n" . $line2);
+        $event->getQueryInfo()->setServerName($line1 . "§r\n" . $line2);
+        $event->getQueryInfo()->setPlayerCount(count($this->getServer()->getOnlinePlayers()));
+        $event->getQueryInfo()->setMaxPlayerCount($this->getServer()->getMaxPlayers());
     }
 
     /* -------------------- LOGIN CHECKS -------------------- */
@@ -73,21 +62,18 @@ class Main extends PluginBase implements Listener {
         $protocol = $event->getPlayerInfo()->getProtocolId();
         $serverProtocol = ProtocolInfo::CURRENT_PROTOCOL;
 
-        // Outdated Client
         if($protocol < $serverProtocol && $this->config->getNested("outdated.client.enabled", true)){
             $event->setKickMessage($this->config->getNested("outdated.client.message"));
             $event->cancel();
             return;
         }
 
-        // Outdated Server
         if($protocol > $serverProtocol && $this->config->getNested("outdated.server.enabled", true)){
             $event->setKickMessage($this->config->getNested("outdated.server.message"));
             $event->cancel();
             return;
         }
 
-        // Whitelist
         if($this->getServer()->hasWhitelist()
             && !$event->getPlayerInfo()->isWhitelisted()
             && $this->config->getNested("whitelist.enabled", true)){
@@ -96,7 +82,6 @@ class Main extends PluginBase implements Listener {
             return;
         }
 
-        // Full Server
         if(count($this->getServer()->getOnlinePlayers()) >= $this->getServer()->getMaxPlayers()
             && $this->config->getNested("full-server.enabled", true)){
             $event->setKickMessage($this->config->getNested("full-server.message"));
@@ -107,21 +92,35 @@ class Main extends PluginBase implements Listener {
     /* -------------------- JOIN / QUIT -------------------- */
 
     public function onJoin(PlayerJoinEvent $event): void {
+
         if(!$this->config->getNested("join.enabled", true)) return;
 
-        $msg = str_replace("{PLAYER}", $event->getPlayer()->getName(),
+        $message = str_replace("{PLAYER}", $event->getPlayer()->getName(),
             $this->config->getNested("join.message"));
 
-        $event->setJoinMessage($msg);
+        foreach($this->getServer()->getOnlinePlayers() as $player){
+            if($player->hasPermission("customalerts.join")){
+                $player->sendMessage($message);
+            }
+        }
+
+        $event->setJoinMessage("");
     }
 
     public function onQuit(PlayerQuitEvent $event): void {
+
         if(!$this->config->getNested("quit.enabled", true)) return;
 
-        $msg = str_replace("{PLAYER}", $event->getPlayer()->getName(),
+        $message = str_replace("{PLAYER}", $event->getPlayer()->getName(),
             $this->config->getNested("quit.message"));
 
-        $event->setQuitMessage($msg);
+        foreach($this->getServer()->getOnlinePlayers() as $player){
+            if($player->hasPermission("customalerts.quit")){
+                $player->sendMessage($message);
+            }
+        }
+
+        $event->setQuitMessage("");
     }
 
     /* -------------------- DEATH SYSTEM -------------------- */
@@ -134,55 +133,90 @@ class Main extends PluginBase implements Listener {
         $cause = $entity->getLastDamageCause();
         if(!$cause instanceof EntityDamageEvent) return;
 
-        $player = $entity->getName();
+        $playerName = $entity->getName();
         $path = "death.default";
-        $replace = ["{PLAYER}" => $player];
+        $permission = "customalerts.death.default";
 
         switch($cause->getCause()){
 
             case EntityDamageEvent::CAUSE_CONTACT:
                 $path = "death.contact";
-                if($cause instanceof EntityDamageByBlockEvent){
-                    $replace["{BLOCK}"] = $cause->getDamager()?->getName() ?? "block";
-                }
+                $permission = "customalerts.death.contact";
             break;
 
             case EntityDamageEvent::CAUSE_ENTITY_ATTACK:
                 $path = "death.kill";
-                if($cause instanceof EntityDamageByEntityEvent){
-                    $replace["{KILLER}"] = $cause->getDamager()->getName();
-                }
+                $permission = "customalerts.death.kill";
             break;
 
             case EntityDamageEvent::CAUSE_PROJECTILE:
                 $path = "death.projectile";
+                $permission = "customalerts.death.projectile";
             break;
 
-            case EntityDamageEvent::CAUSE_SUFFOCATION: $path = "death.suffocation"; break;
-            case EntityDamageEvent::CAUSE_FALL: $path = "death.fall"; break;
-            case EntityDamageEvent::CAUSE_FIRE: $path = "death.fire"; break;
-            case EntityDamageEvent::CAUSE_FIRE_TICK: $path = "death.onfire"; break;
-            case EntityDamageEvent::CAUSE_LAVA: $path = "death.lava"; break;
-            case EntityDamageEvent::CAUSE_DROWNING: $path = "death.drowning"; break;
+            case EntityDamageEvent::CAUSE_SUFFOCATION:
+                $path = "death.suffocation";
+                $permission = "customalerts.death.suffocation";
+            break;
+
+            case EntityDamageEvent::CAUSE_FALL:
+                $path = "death.fall";
+                $permission = "customalerts.death.fall";
+            break;
+
+            case EntityDamageEvent::CAUSE_FIRE:
+                $path = "death.fire";
+                $permission = "customalerts.death.fire";
+            break;
+
+            case EntityDamageEvent::CAUSE_FIRE_TICK:
+                $path = "death.onfire";
+                $permission = "customalerts.death.onfire";
+            break;
+
+            case EntityDamageEvent::CAUSE_LAVA:
+                $path = "death.lava";
+                $permission = "customalerts.death.lava";
+            break;
+
+            case EntityDamageEvent::CAUSE_DROWNING:
+                $path = "death.drowning";
+                $permission = "customalerts.death.drowning";
+            break;
 
             case EntityDamageEvent::CAUSE_BLOCK_EXPLOSION:
             case EntityDamageEvent::CAUSE_ENTITY_EXPLOSION:
                 $path = "death.explosion";
+                $permission = "customalerts.death.explosion";
             break;
 
-            case EntityDamageEvent::CAUSE_VOID: $path = "death.void"; break;
-            case EntityDamageEvent::CAUSE_SUICIDE: $path = "death.suicide"; break;
-            case EntityDamageEvent::CAUSE_MAGIC: $path = "death.magic"; break;
+            case EntityDamageEvent::CAUSE_VOID:
+                $path = "death.void";
+                $permission = "customalerts.death.void";
+            break;
+
+            case EntityDamageEvent::CAUSE_SUICIDE:
+                $path = "death.suicide";
+                $permission = "customalerts.death.suicide";
+            break;
+
+            case EntityDamageEvent::CAUSE_MAGIC:
+                $path = "death.magic";
+                $permission = "customalerts.death.magic";
+            break;
         }
 
         if(!$this->config->getNested("$path.enabled", true)) return;
 
-        $message = $this->config->getNested("$path.message");
+        $message = str_replace("{PLAYER}", $playerName,
+            $this->config->getNested("$path.message"));
 
-        $event->setDeathMessage(str_replace(
-            array_keys($replace),
-            array_values($replace),
-            $message
-        ));
+        foreach($this->getServer()->getOnlinePlayers() as $player){
+            if($player->hasPermission($permission)){
+                $player->sendMessage($message);
+            }
+        }
+
+        $event->setDeathMessage("");
     }
 }
