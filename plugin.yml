@@ -1,56 +1,6 @@
-name: CustomAlerts
-main: CustomAlerts\Main
-version: 2.0.0
+name: AdvancedServerMessages
+main: AdvancedServerMessages\Main
+version: 1.0.0
 api: 5.0.0
-author: ZyberPE
-description: Advanced customizable alerts system for API 5
-
-permissions:
-
-  customalerts.join:
-    default: true
-
-  customalerts.quit:
-    default: true
-
-  customalerts.death.default:
-    default: true
-
-  customalerts.death.contact:
-    default: true
-
-  customalerts.death.kill:
-    default: true
-
-  customalerts.death.projectile:
-    default: true
-
-  customalerts.death.suffocation:
-    default: true
-
-  customalerts.death.fall:
-    default: true
-
-  customalerts.death.fire:
-    default: true
-
-  customalerts.death.onfire:
-    default: true
-
-  customalerts.death.lava:
-    default: true
-
-  customalerts.death.drowning:
-    default: true
-
-  customalerts.death.explosion:
-    default: true
-
-  customalerts.death.void:
-    default: true
-
-  customalerts.death.suicide:
-    default: true
-
-  customalerts.death.magic:
-    default: true
+author: zyberpe
+description: Fully customizable MOTD, join, quit, world change and death system.
