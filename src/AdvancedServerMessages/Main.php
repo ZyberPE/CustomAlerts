@@ -6,7 +6,6 @@ use pocketmine\plugin\PluginBase;
 use pocketmine\event\Listener;
 use pocketmine\event\player\PlayerJoinEvent;
 use pocketmine\event\player\PlayerQuitEvent;
-use pocketmine\event\player\PlayerChangeWorldEvent;
 use pocketmine\event\entity\EntityDeathEvent;
 use pocketmine\event\entity\EntityDamageEvent;
 use pocketmine\event\entity\EntityDamageByEntityEvent;
@@ -22,12 +21,7 @@ class Main extends PluginBase implements Listener {
         $this->startMotdUpdater();
     }
 
-    /* ========================================= */
-    /*                 UTILITIES                 */
-    /* ========================================= */
-
     private function format(string $message, array $extra = []): string {
-
         $format = $this->getConfig()->get("datetime-format", "H:i:s");
 
         $replacements = array_merge([
@@ -43,12 +37,7 @@ class Main extends PluginBase implements Listener {
         );
     }
 
-    /* ========================================= */
-    /*                  MOTD                     */
-    /* ========================================= */
-
     private function startMotdUpdater(): void {
-
         $motd = $this->getConfig()->get("Motd");
         if(!$motd["custom"]) return;
 
@@ -61,12 +50,7 @@ class Main extends PluginBase implements Listener {
         }), $interval);
     }
 
-    /* ========================================= */
-    /*                JOIN EVENT                 */
-    /* ========================================= */
-
     public function onJoin(PlayerJoinEvent $event): void {
-
         $player = $event->getPlayer();
 
         if(!$player->hasPlayedBefore() && $this->getConfig()->getNested("FirstJoin.enable")){
@@ -86,12 +70,7 @@ class Main extends PluginBase implements Listener {
         }
     }
 
-    /* ========================================= */
-    /*                 QUIT EVENT                */
-    /* ========================================= */
-
     public function onQuit(PlayerQuitEvent $event): void {
-
         if($this->getConfig()->getNested("Quit.hide")){
             $event->setQuitMessage("");
             return;
@@ -103,31 +82,7 @@ class Main extends PluginBase implements Listener {
         }
     }
 
-    /* ========================================= */
-    /*             WORLD CHANGE EVENT            */
-    /* ========================================= */
-
-    public function onWorldChange(PlayerChangeWorldEvent $event): void {
-
-        if(!$this->getConfig()->getNested("WorldChange.enable")) return;
-
-        $msg = $this->getConfig()->getNested("WorldChange.message");
-
-        $formatted = $this->format($msg, [
-            "{PLAYER}" => $event->getPlayer()->getName(),
-            "{ORIGIN}" => $event->getFrom()->getDisplayName(),
-            "{TARGET}" => $event->getPlayer()->getWorld()->getDisplayName()
-        ]);
-
-        $this->getServer()->broadcastMessage($formatted);
-    }
-
-    /* ========================================= */
-    /*                 DEATH EVENT               */
-    /* ========================================= */
-
     public function onDeath(EntityDeathEvent $event): void {
-
         $entity = $event->getEntity();
         if(!$entity instanceof Player) return;
 
@@ -160,64 +115,23 @@ class Main extends PluginBase implements Listener {
         $path = "Death.message";
 
         switch($cause->getCause()){
-
-            case EntityDamageEvent::CAUSE_CONTACT:
-                $path = "Death.death-contact-message.message";
-            break;
-
-            case EntityDamageEvent::CAUSE_ENTITY_ATTACK:
-                $path = "Death.kill-message.message";
-            break;
-
-            case EntityDamageEvent::CAUSE_PROJECTILE:
-                $path = "Death.death-projectile-message.message";
-            break;
-
-            case EntityDamageEvent::CAUSE_SUFFOCATION:
-                $path = "Death.death-suffocation-message.message";
-            break;
-
-            case EntityDamageEvent::CAUSE_FALL:
-                $path = "Death.death-fall-message.message";
-            break;
-
-            case EntityDamageEvent::CAUSE_FIRE:
-                $path = "Death.death-fire-message.message";
-            break;
-
-            case EntityDamageEvent::CAUSE_FIRE_TICK:
-                $path = "Death.death-on-fire-message.message";
-            break;
-
-            case EntityDamageEvent::CAUSE_LAVA:
-                $path = "Death.death-lava-message.message";
-            break;
-
-            case EntityDamageEvent::CAUSE_DROWNING:
-                $path = "Death.death-drowning-message.message";
-            break;
-
+            case EntityDamageEvent::CAUSE_CONTACT: $path = "Death.death-contact-message.message"; break;
+            case EntityDamageEvent::CAUSE_ENTITY_ATTACK: $path = "Death.kill-message.message"; break;
+            case EntityDamageEvent::CAUSE_PROJECTILE: $path = "Death.death-projectile-message.message"; break;
+            case EntityDamageEvent::CAUSE_SUFFOCATION: $path = "Death.death-suffocation-message.message"; break;
+            case EntityDamageEvent::CAUSE_FALL: $path = "Death.death-fall-message.message"; break;
+            case EntityDamageEvent::CAUSE_FIRE: $path = "Death.death-fire-message.message"; break;
+            case EntityDamageEvent::CAUSE_FIRE_TICK: $path = "Death.death-on-fire-message.message"; break;
+            case EntityDamageEvent::CAUSE_LAVA: $path = "Death.death-lava-message.message"; break;
+            case EntityDamageEvent::CAUSE_DROWNING: $path = "Death.death-drowning-message.message"; break;
             case EntityDamageEvent::CAUSE_BLOCK_EXPLOSION:
-            case EntityDamageEvent::CAUSE_ENTITY_EXPLOSION:
-                $path = "Death.death-explosion-message.message";
-            break;
-
-            case EntityDamageEvent::CAUSE_VOID:
-                $path = "Death.death-void-message.message";
-            break;
-
-            case EntityDamageEvent::CAUSE_SUICIDE:
-                $path = "Death.death-suicide-message.message";
-            break;
-
-            case EntityDamageEvent::CAUSE_MAGIC:
-                $path = "Death.death-magic-message.message";
-            break;
+            case EntityDamageEvent::CAUSE_ENTITY_EXPLOSION: $path = "Death.death-explosion-message.message"; break;
+            case EntityDamageEvent::CAUSE_VOID: $path = "Death.death-void-message.message"; break;
+            case EntityDamageEvent::CAUSE_SUICIDE: $path = "Death.death-suicide-message.message"; break;
+            case EntityDamageEvent::CAUSE_MAGIC: $path = "Death.death-magic-message.message"; break;
         }
 
-        if($this->getConfig()->getNested(str_replace(".message", ".custom", $path)) === false){
-            return;
-        }
+        if($this->getConfig()->getNested(str_replace(".message", ".custom", $path)) === false) return;
 
         $msg = $this->getConfig()->getNested($path);
 
